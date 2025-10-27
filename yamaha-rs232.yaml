@@ -35,11 +35,10 @@ esphome:
   on_boot:
     priority: -10
     then:
-      - lambda: |-
-          id(_boot_ms) = millis();
       - delay: 1s
       # Optionaler Status-Pull (Operation): 7A7F
       - script.execute: { id: send_op, code: "7A7F" }
+      - delay: 200ms
       - script.execute: { id: send_op, code: "7A7F" }
 
 uart:
@@ -64,18 +63,6 @@ esp32:
 
 
 # --------------------------------------------------
-# Helfer: Startzeit für sanften Poller
-# --------------------------------------------------
-globals:
-  - id: start_ms
-    type: uint32_t
-    initial_value: "0"
-# ===== Globale Helfer =====
-
-  - id: _boot_ms
-    type: uint32_t
-    initial_value: '0'
-# --------------------------------------------------
 # POLLER: liest UART, parst ASCII-HEX zwischen STX/ETX
 # --------------------------------------------------
 interval:
@@ -88,8 +75,8 @@ interval:
           static std::string cur, last;
           static uint32_t last_ts = 0;
           const uint32_t now = millis();
+          const char* TAG = "yamaha_rs232";
 
-          auto is_hex = [](char c){ return (c>='0'&&c<='9')||(c>='A'&&c<='F'); };
           auto hex_up = [](const std::string &s){
             std::string r; r.reserve(s.size());
             for (char ch: s) {
@@ -181,6 +168,8 @@ interval:
               std::string up = hex_up(cur);
               cur.clear();
               if (up.size() < 4) continue;
+
+              ESP_LOGV(TAG, "RX frame: %s", up.c_str());
               
               
               // ---------- Standard: RCMD/RDAT extrahieren ----------
@@ -298,16 +287,59 @@ interval:
 # SCRIPTS: Sender
 # --------------------------------------------------
 script:
+  # Gemeinsamer Rahmenaufbau (STX + SW + Payload + ETX + CR/LF)
+  - id: send_frame
+    parameters:
+      sw: string
+      payload: string
+    then:
+      - lambda: |-
+          const char* TAG = "yamaha_rs232";
+          auto sanitize_hex = [](const std::string &in) -> std::string {
+            std::string out;
+            out.reserve(in.size());
+            for (char ch : in) {
+              char c = (char) toupper((unsigned char) ch);
+              if ((c >= '0' && c <= '9') || (c >= 'A' && c <= 'F')) {
+                out.push_back(c);
+              }
+            }
+            return out;
+          };
+
+          std::string sw_val = sw.empty() ? std::string("0") : sw.substr(0, 1);
+          char sw_char = (char) toupper((unsigned char) sw_val[0]);
+          if (sw_char != '0' && sw_char != '2' && sw_char != '3') {
+            ESP_LOGW(TAG, "Unsupported SW '%c', falling back to remote (0)", sw_char);
+            sw_char = '0';
+          }
+
+          std::string payload_hex = sanitize_hex(payload);
+          if (payload_hex.empty()) {
+            ESP_LOGW(TAG, "Ignoring empty payload for SW=%c", sw_char);
+            return;
+          }
+          if ((payload_hex.size() % 2) != 0) {
+            ESP_LOGW(TAG, "Odd payload length (%u). Left-padding with 0.", (unsigned) payload_hex.size());
+            payload_hex.insert(payload_hex.begin(), '0');
+          }
+
+          ESP_LOGD(TAG, "TX SW=%c payload=%s", sw_char, payload_hex.c_str());
+          char sw_buf[2] = { sw_char, 0 };
+
+          id(yamaha_uart).write_byte(0x02);
+          id(yamaha_uart).write_str(sw_buf);
+          id(yamaha_uart).write_str(payload_hex.c_str());
+          id(yamaha_uart).write_byte(0x03);
+          id(yamaha_uart).write_str("\r\n");
+
   # SW=0 – „Fernbedienungs“-Befehle (Operation)
   - id: send_op
     parameters:
       code: string        # z. B. "7A1D"
     then:
       - lambda: |-
-          id(yamaha_uart).write_byte(0x02);
-          id(yamaha_uart).write_str("0");
-          id(yamaha_uart).write_str(code.c_str());
-          id(yamaha_uart).write_byte(0x03);
+          id(send_frame).execute("0", code);
 
   # SW=2 – 2..5 Nibbles am Stück (z. B. "2000" oder "20101" …)
   - id: send_sys
@@ -315,45 +347,31 @@ script:
       nibbles: string
     then:
       - lambda: |-
-          id(yamaha_uart).write_byte(0x02);
-          id(yamaha_uart).write_str("2");
-          id(yamaha_uart).write_str(nibbles.c_str());
-          id(yamaha_uart).write_byte(0x03);
+          id(send_frame).execute("2", nibbles);
   - id: send_adv
     parameters:
       code: string
     then:
       - lambda: |-
-          id(yamaha_uart).write_byte(0x02);   // STX
-          id(yamaha_uart).write_str("3");     // SW = 3 (Advanced)
-          id(yamaha_uart).write_str(code.c_str());
-          id(yamaha_uart).write_byte(0x03);   // ETX
+          id(send_frame).execute("3", code);
 
   # Absolute Lautstärke main: SW=2, 23 0x
   - id: send_sys_vol_main
     parameters:
-      vol_hex: string     # "01".."C7"
+      vol_hex: string     # "27".."E8"
     then:
       - lambda: |-
-          id(yamaha_uart).write_byte(0x02);
-          id(yamaha_uart).write_str("2");
-          id(yamaha_uart).write_str("30");       // '23' + '0'
-          id(yamaha_uart).write_str(vol_hex.c_str());
-          id(yamaha_uart).write_byte(0x03);
+          std::string body = std::string("30") + vol_hex;
+          id(send_frame).execute("2", body);
 
   # Absolute Lautstärke zone2: SW=2, 23 1x
   - id: send_sys_vol_zone2
     parameters:
-      vol_hex: string     # "01".."50"
+      vol_hex: string     # "27".."E8"
     then:
       - lambda: |-
-          id(yamaha_uart).write_byte(0x02);
-          id(yamaha_uart).write_str("2");
-          id(yamaha_uart).write_str("31");       // '23' + '1'
-          id(yamaha_uart).write_str(vol_hex.c_str());
-          id(yamaha_uart).write_byte(0x03);
-
-
+          std::string body = std::string("31") + vol_hex;
+          id(send_frame).execute("2", body);
 # --------------------------------------------------
 # UI-ENTITIES (Buttons/Select/Slider)
 # --------------------------------------------------

@@ -628,35 +628,26 @@ button:
             - script.execute: { id: send_op, code: "7E26" }   # Zone3 ON
             
   - platform: template
-    name: "OSD On Screen"
-    on_press: { then: [ script.execute: { id: send_op, code: "7A7E" } ] }
+    name: "GUI Top Menu"
+    on_press: { then: [ script.execute: { id: send_op, code: "7AA0" } ] }
   - platform: template
-    name: "OSD Cursor Up"
-    on_press: { then: [ script.execute: { id: send_op, code: "7A7B" } ] }
+    name: "GUI Cursor Up"
+    on_press: { then: [ script.execute: { id: send_op, code: "7A9D" } ] }
   - platform: template
-    name: "OSD Cursor Down"
-    on_press: { then: [ script.execute: { id: send_op, code: "7A7C" } ] }
+    name: "GUI Cursor Left"
+    on_press: { then: [ script.execute: { id: send_op, code: "7A9F" } ] }
   - platform: template
-    name: "OSD Cursor Left"
-    on_press: { then: [ script.execute: { id: send_op, code: "7A7A" } ] }
+    name: "GUI Cursor Right"
+    on_press: { then: [ script.execute: { id: send_op, code: "7A9E" } ] }
   - platform: template
-    name: "OSD Cursor Right"
-    on_press: { then: [ script.execute: { id: send_op, code: "7A7D" } ] }
+    name: "GUI Cursor Down"
+    on_press: { then: [ script.execute: { id: send_op, code: "7A9C" } ] }
   - platform: template
-    name: "OSD Enter"
-    on_press: { then: [ script.execute: { id: send_op, code: "7A79" } ] }
+    name: "GUI Enter"
+    on_press: { then: [ script.execute: { id: send_op, code: "7ADE" } ] }
   - platform: template
-    name: "OSD Return"
-    on_press: { then: [ script.execute: { id: send_op, code: "7A78" } ] }
-  - platform: template
-    name: "OSD Off"
-    on_press: { then: [ script.execute: { id: send_op, code: "7EB0" } ] }
-  - platform: template
-    name: "OSD Short"
-    on_press: { then: [ script.execute: { id: send_op, code: "7EB1" } ] }
-  - platform: template
-    name: "OSD Full"
-    on_press: { then: [ script.execute: { id: send_op, code: "7EB2" } ] }
+    name: "GUI Exit"
+    on_press: { then: [ script.execute: { id: send_op, code: "7AA1" } ] }
 
   - platform: template
     name: "Send OP (SW=0) – from text"

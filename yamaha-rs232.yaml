@@ -775,25 +775,21 @@ select:
     options: ["PHONO","CD","TUNER","CD-R","MD/TAPE","BD/HD-DVD","DVD","DTV/CBL","VCR","DVR","V-AUX","NET/USB","Multi"]
     set_action:
       - lambda: |-
-          std::string s = x, cmd_op, cmd_sys;
-          if (s=="PHONO") cmd_op="7A14";
-          else if (s=="CD") cmd_op="7A15";
-          else if (s=="TUNER") cmd_op="7A16";
-          else if (s=="CD-R") cmd_op="7A19";
-          else if (s=="MD/TAPE") cmd_op="7A18";
-          else if (s=="BD/HD-DVD") cmd_op="7AC8";
-          else if (s=="DVD") cmd_op="7AC1";
-          else if (s=="DTV/CBL") cmd_op="7A54";
-          else if (s=="VCR") cmd_op="7A0F";
-          else if (s=="DVR") cmd_op="7A13";
-          else if (s=="V-AUX") cmd_op="7A55";
-          else if (s=="NET/USB") cmd_sys="210D";
-          else if (s=="Multi") cmd_op="7A87";
-          if (!cmd_op.empty()) {
-            id(send_op).execute(cmd_op);
-          } else if (!cmd_sys.empty()) {
-            id(send_sys).execute(cmd_sys);
-          }
+          std::string s = x, cmd;
+          if (s=="PHONO") cmd="7A14";
+          else if (s=="CD") cmd="7A15";
+          else if (s=="TUNER") cmd="7A16";
+          else if (s=="CD-R") cmd="7A19";
+          else if (s=="MD/TAPE") cmd="7A18";
+          else if (s=="BD/HD-DVD") cmd="7AC8";
+          else if (s=="DVD") cmd="7AC1";
+          else if (s=="DTV/CBL") cmd="7A54";
+          else if (s=="VCR") cmd="7A0F";
+          else if (s=="DVR") cmd="7A13";
+          else if (s=="V-AUX") cmd="7A55";
+          else if (s=="NET/USB") cmd="0F7F013FC0";
+          else if (s=="Multi") cmd="7A87";
+          if (!cmd.empty()) id(send_op).execute(cmd);
 
   - platform: template
     id: zone2_input_select
@@ -802,24 +798,20 @@ select:
     options: ["PHONO","CD","TUNER","CD-R","MD/TAPE","BD/HD-DVD","DVD","DTV/CBL","VCR","DVR","V-AUX","NET/USB"]
     set_action:
       - lambda: |-
-          std::string s = x, cmd_op, cmd_sys;
-          if (s=="PHONO") cmd_op="7AD0";
-          else if (s=="CD") cmd_op="7AD1";
-          else if (s=="TUNER") cmd_op="7AD2";
-          else if (s=="CD-R") cmd_op="7AD4";
-          else if (s=="MD/TAPE") cmd_op="7AD3";
-          else if (s=="BD/HD-DVD") cmd_op="7ACE";
-          else if (s=="DVD") cmd_op="7ACD";
-          else if (s=="DTV/CBL") cmd_op="7AD9";
-          else if (s=="VCR") cmd_op="7AD6";
-          else if (s=="DVR") cmd_op="7AD7";
-          else if (s=="V-AUX") cmd_op="7AD8";
-          else if (s=="NET/USB") cmd_sys="240D";
-          if (!cmd_op.empty()) {
-            id(send_op).execute(cmd_op);
-          } else if (!cmd_sys.empty()) {
-            id(send_sys).execute(cmd_sys);
-          }
+          std::string s = x, cmd;
+          if (s=="PHONO") cmd="7AD0";
+          else if (s=="CD") cmd="7AD1";
+          else if (s=="TUNER") cmd="7AD2";
+          else if (s=="CD-R") cmd="7AD4";
+          else if (s=="MD/TAPE") cmd="7AD3";
+          else if (s=="BD/HD-DVD") cmd="7ACE";
+          else if (s=="DVD") cmd="7ACD";
+          else if (s=="DTV/CBL") cmd="7AD9";
+          else if (s=="VCR") cmd="7AD6";
+          else if (s=="DVR") cmd="7AD7";
+          else if (s=="V-AUX") cmd="7AD8";
+          else if (s=="NET/USB") cmd="0F7F0140BF";
+          if (!cmd.empty()) id(send_op).execute(cmd);
   - platform: template
     id: zone3_input_select
     name: "Zone3 Input"
@@ -827,24 +819,20 @@ select:
     options: ["PHONO","CD","TUNER","CD-R","MD/TAPE","BD/HD-DVD","DVD","DTV/CBL","VCR","DVR","V-AUX","NET/USB"]
     set_action:
       - lambda: |-
-          std::string s = x, cmd_op, cmd_sys;
-          if (s=="PHONO") cmd_op="7AF1";
-          else if (s=="CD") cmd_op="7AF2";
-          else if (s=="TUNER") cmd_op="7AF3";
-          else if (s=="CD-R") cmd_op="7AF5";
-          else if (s=="MD/TAPE") cmd_op="7AF4";
-          else if (s=="BD/HD-DVD") cmd_op="7AFB";
-          else if (s=="DVD") cmd_op="7AFC";
-          else if (s=="DTV/CBL") cmd_op="7AF6";
-          else if (s=="VCR") cmd_op="7AF9";
-          else if (s=="DVR") cmd_op="7AFA";
-          else if (s=="V-AUX") cmd_op="7AD8";
-          else if (s=="NET/USB") cmd_sys="A00D";
-          if (!cmd_op.empty()) {
-            id(send_op).execute(cmd_op);
-          } else if (!cmd_sys.empty()) {
-            id(send_sys).execute(cmd_sys);
-          }
+          std::string s = x, cmd;
+          if (s=="PHONO") cmd="7AF1";
+          else if (s=="CD") cmd="7AF2";
+          else if (s=="TUNER") cmd="7AF3";
+          else if (s=="CD-R") cmd="7AF5";
+          else if (s=="MD/TAPE") cmd="7AF4";
+          else if (s=="BD/HD-DVD") cmd="7AFB";
+          else if (s=="DVD") cmd="7AFC";
+          else if (s=="DTV/CBL") cmd="7AF6";
+          else if (s=="VCR") cmd="7AF9";
+          else if (s=="DVR") cmd="7AFA";
+          else if (s=="V-AUX") cmd="7AD8";
+          else if (s=="NET/USB") cmd="0F7F0141BE";
+          if (!cmd.empty()) id(send_op).execute(cmd);
   - platform: template
     id: netusb_source_select
     name: "NET/USB Source"

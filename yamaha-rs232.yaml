@@ -109,8 +109,8 @@ interval:
           auto decode_input = [](const std::string &code) -> const char* {
             struct Entry { const char* code; const char* name; };
             static const Entry entries[] = {
-              {"0D", "Net/USB"},
-              {"0C", "V-Aux"},
+              {"0D", "NET/USB"},
+              {"0C", "V-AUX"},
               {"09", "VCR"},
               {"0A", "DVR"},
               {"06", "DTV/CBL"},
@@ -121,7 +121,7 @@ interval:
               {"01", "CD"},
               {"00", "PHONO"},
               {"10", "Multi"},
-              {"02", "Tuner"},
+              {"02", "TUNER"},
             };
             for (const auto &entry : entries) {
               if (code == entry.code) {
@@ -649,6 +649,45 @@ button:
     name: "GUI Exit"
     on_press: { then: [ script.execute: { id: send_op, code: "7AA1" } ] }
 
+  # NET/USB control surface
+  - platform: template
+    name: "NET/USB Menu"
+    on_press: { then: [ script.execute: { id: send_op, code: "0F7F012FD0" } ] }
+  - platform: template
+    name: "NET/USB Enter"
+    on_press: { then: [ script.execute: { id: send_op, code: "0F7F0131CE" } ] }
+  - platform: template
+    name: "NET/USB Display"
+    on_press: { then: [ script.execute: { id: send_op, code: "0F7F0135CA" } ] }
+  - platform: template
+    name: "NET/USB Cursor Up"
+    on_press: { then: [ script.execute: { id: send_op, code: "0F7F012ED1" } ] }
+  - platform: template
+    name: "NET/USB Cursor Down"
+    on_press: { then: [ script.execute: { id: send_op, code: "0F7F0134CB" } ] }
+  - platform: template
+    name: "NET/USB Cursor Left"
+    on_press: { then: [ script.execute: { id: send_op, code: "0F7F0130CF" } ] }
+  - platform: template
+    name: "NET/USB Cursor Right"
+    on_press: { then: [ script.execute: { id: send_op, code: "0F7F0132CD" } ] }
+  - platform: template
+    name: "NET/USB Play"
+    icon: mdi:play
+    on_press: { then: [ script.execute: { id: send_op, code: "0F7F013EC1" } ] }
+  - platform: template
+    name: "NET/USB Stop"
+    icon: mdi:stop
+    on_press: { then: [ script.execute: { id: send_op, code: "0F7F013DC2" } ] }
+  - platform: template
+    name: "NET/USB Skip Forward"
+    icon: mdi:skip-next
+    on_press: { then: [ script.execute: { id: send_op, code: "0F7F013CC3" } ] }
+  - platform: template
+    name: "NET/USB Skip Back"
+    icon: mdi:skip-previous
+    on_press: { then: [ script.execute: { id: send_op, code: "0F7F013BC4" } ] }
+
   # - platform: template
   #   name: "Send OP (SW=0) – from text"
   #   icon: mdi:send
@@ -733,7 +772,7 @@ select:
     id: main_input_select
     name: "Main Input"
     optimistic: false
-    options: ["PHONO","CD","TUNER","CD-R","MD/TAPE","BD/HD-DVD","DVD","DTV/CBL","VCR","DVR","V-AUX","Multi"]
+    options: ["PHONO","CD","TUNER","CD-R","MD/TAPE","BD/HD-DVD","DVD","DTV/CBL","VCR","DVR","V-AUX","NET/USB","Multi"]
     set_action:
       - lambda: |-
           std::string s = x, cmd;
@@ -748,6 +787,7 @@ select:
           else if (s=="VCR") cmd="7A0F";
           else if (s=="DVR") cmd="7A13";
           else if (s=="V-AUX") cmd="7A55";
+          else if (s=="NET/USB") cmd="0F7F013FC0";
           else if (s=="Multi") cmd="7A87";
           if (!cmd.empty()) id(send_op).execute(cmd);
 
@@ -755,7 +795,7 @@ select:
     id: zone2_input_select
     name: "Zone2 Input"
     optimistic: false
-    options: ["PHONO","CD","TUNER","CD-R","MD/TAPE","BD/HD-DVD","DVD","DTV/CBL","VCR","DVR","V-AUX"]
+    options: ["PHONO","CD","TUNER","CD-R","MD/TAPE","BD/HD-DVD","DVD","DTV/CBL","VCR","DVR","V-AUX","NET/USB"]
     set_action:
       - lambda: |-
           std::string s = x, cmd;
@@ -770,12 +810,13 @@ select:
           else if (s=="VCR") cmd="7AD6";
           else if (s=="DVR") cmd="7AD7";
           else if (s=="V-AUX") cmd="7AD8";
+          else if (s=="NET/USB") cmd="0F7F0140BF";
           if (!cmd.empty()) id(send_op).execute(cmd);
   - platform: template
     id: zone3_input_select
     name: "Zone3 Input"
     optimistic: false
-    options: ["PHONO","CD","TUNER","CD-R","MD/TAPE","BD/HD-DVD","DVD","DTV/CBL","VCR","DVR","V-AUX"]
+    options: ["PHONO","CD","TUNER","CD-R","MD/TAPE","BD/HD-DVD","DVD","DTV/CBL","VCR","DVR","V-AUX","NET/USB"]
     set_action:
       - lambda: |-
           std::string s = x, cmd;
@@ -790,7 +831,43 @@ select:
           else if (s=="VCR") cmd="7AF9";
           else if (s=="DVR") cmd="7AFA";
           else if (s=="V-AUX") cmd="7AD8";
+          else if (s=="NET/USB") cmd="0F7F0141BE";
           if (!cmd.empty()) id(send_op).execute(cmd);
+  - platform: template
+    id: netusb_source_select
+    name: "NET/USB Source"
+    optimistic: true
+    options: ["PC/MCX","NET RADIO","USB"]
+    set_action:
+      - lambda: |-
+          std::string s = x, cmd;
+          if (s=="PC/MCX") cmd="0F7F0136C9";
+          else if (s=="NET RADIO") cmd="0F7F0137C8";
+          else if (s=="USB") cmd="0F7F0138C7";
+          if (!cmd.empty()) id(send_op).execute(cmd);
+  - platform: template
+    id: netusb_repeat_select
+    name: "NET/USB Repeat"
+    optimistic: true
+    options: ["OFF","SINGLE","ALL"]
+    set_action:
+      - lambda: |-
+          std::string s = x, cmd;
+          if (s=="OFF") cmd="9900";
+          else if (s=="SINGLE") cmd="9901";
+          else if (s=="ALL") cmd="9902";
+          if (!cmd.empty()) id(send_sys).execute(cmd);
+  - platform: template
+    id: netusb_shuffle_select
+    name: "NET/USB Shuffle"
+    optimistic: true
+    options: ["OFF","ON"]
+    set_action:
+      - lambda: |-
+          std::string s = x, cmd;
+          if (s=="OFF") cmd="9A00";
+          else if (s=="ON") cmd="9A01";
+          if (!cmd.empty()) id(send_sys).execute(cmd);
 # --------------------------------------------------
 # STATES (vom Parser gesetzt) + OSD-Text
 # --------------------------------------------------

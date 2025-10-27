@@ -789,7 +789,7 @@ select:
           else if (s=="DTV/CBL") cmd="7AF6";
           else if (s=="VCR") cmd="7AF9";
           else if (s=="DVR") cmd="7AFA";
-          # else if (s=="V-AUX") cmd="7AD8";
+          else if (s=="V-AUX") cmd="7AD8";
           if (!cmd.empty()) id(send_op).execute(cmd);
 # --------------------------------------------------
 # STATES (vom Parser gesetzt) + OSD-Text

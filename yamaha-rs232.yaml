@@ -99,6 +99,69 @@ interval:
             return r;
           };
 
+          auto decode_input = [](const std::string &code) -> const char* {
+            struct Entry { const char* code; const char* name; };
+            static const Entry entries[] = {
+              {"0D", "Net/USB"},
+              {"0C", "V-Aux"},
+              {"09", "VCR"},
+              {"0A", "DVR"},
+              {"06", "DTV/CBL"},
+              {"05", "DVD"},
+              {"11", "BD/HD-DVD"},
+              {"04", "MD/TAPE"},
+              {"03", "CD-R"},
+              {"01", "CD"},
+              {"00", "PHONO"},
+              {"10", "Multi"},
+              {"02", "Tuner"},
+            };
+            for (const auto &entry : entries) {
+              if (code == entry.code) {
+                return entry.name;
+              }
+            }
+            return "";
+          };
+
+          auto decode_surround_program = [](const std::string &code) -> const char* {
+            struct Entry { const char* code; const char* name; };
+            static const Entry entries[] = {
+              {"34", "2Ch. Stereo"},
+              {"17", "7Ch. Stereo"},
+              {"44", "Straight Music Enhancer"},
+              {"45", "7Ch. Music Enhancer"},
+              {"2C", "Surround Decode Pro Logic"},
+              {"00", "Classical Hall Munich"},
+              {"05", "Classical Hall Vienna"},
+              {"07", "Classical Hall Amsterdam"},
+              {"09", "Classical Hall Freiburg"},
+              {"0B", "Classical Chamber"},
+              {"0D", "Live/Club Village Vanguard"},
+              {"11", "Live/Club Warehouse Loft"},
+              {"0F", "Live/Club Cellar Club"},
+              {"10", "Live/Club The Roxy Theater"},
+              {"0E", "Live/Club The Bottom Line"},
+              {"21", "Entertainment Sports"},
+              {"1E", "Entertainment Action Game"},
+              {"1F", "Entertainment RPG"},
+              {"18", "Entertainment Music Video"},
+              {"1C", "Entertainment Recital/Opera"},
+              {"2D", "Movie Standard"},
+              {"24", "Movie Spectacle"},
+              {"25", "Movie Sci-Fi"},
+              {"28", "Movie Adventure"},
+              {"29", "Movie Drama"},
+              {"20", "Movie Mono"},
+            };
+            for (const auto &entry : entries) {
+              if (code == entry.code) {
+                return entry.name;
+              }
+            }
+            return "";
+          };
+
           int guard = 0;
           while (id(yamaha_uart).available() && guard++ < 2048) {
             uint8_t b;
@@ -137,7 +200,7 @@ interval:
                 continue;
               }
 
-              id(last_report).publish_state((rcmd + rdat).c_str());
+              id(last_report).publish_state(rcmd + rdat);
 
               // ---------- Mappings ----------
 
@@ -166,20 +229,7 @@ interval:
 
               // Main Inputs (21)
               if (rcmd == "21") {
-                const char* name =
-                  rdat=="0D"?"Net/USB" :
-                  rdat=="0C"?"V-Aux" :
-                  rdat=="09"?"VCR" :
-                  rdat=="0A"?"DVR" :
-                  rdat=="06"?"DTV/CBL" :
-                  rdat=="05"?"DVD" :
-                  rdat=="11"?"BD/HD-DVD" :
-                  rdat=="04"?"MD/TAPE" :
-                  rdat=="03"?"CD-R" :
-                  rdat=="01"?"CD" :
-                  rdat=="00"?"PHONO" :
-                  rdat=="10"?"Multi" :
-                  rdat=="02"?"Tuner" : "";
+                const char* name = decode_input(rdat);
                 if (*name) id(input_state).publish_state(name);
                 continue;
               }
@@ -192,20 +242,7 @@ interval:
               }
               // Zone2 Inputs (24)
               if (rcmd == "24") {
-                const char* name =
-                  rdat=="0D"?"Net/USB" :
-                  rdat=="0C"?"V-Aux" :
-                  rdat=="09"?"VCR" :
-                  rdat=="0A"?"DVR" :
-                  rdat=="06"?"DTV/CBL" :
-                  rdat=="05"?"DVD" :
-                  rdat=="11"?"BD/HD-DVD" :
-                  rdat=="04"?"MD/TAPE" :
-                  rdat=="03"?"CD-R" :
-                  rdat=="01"?"CD" :
-                  rdat=="00"?"PHONO" :
-                  rdat=="10"?"Multi" :
-                  rdat=="02"?"Tuner" : "";
+                const char* name = decode_input(rdat);
                 if (*name) id(zone2_input_state).publish_state(name);
                 continue;
               }
@@ -237,33 +274,7 @@ interval:
               }
               // Surround Modes (28)
               if (rcmd == "28") {
-                const char* prog =
-                  rdat=="34"?"2Ch. Stereo" :
-                  rdat=="17"?"7Ch. Stereo" :
-                  rdat=="44"?"Straight Music Enhancer" :
-                  rdat=="45"?"7Ch. Music Enhancer" :
-                  rdat=="2C"?"Surround Decode Pro Logic" :
-                  rdat=="00"?"Classical Hall Munich" :
-                  rdat=="05"?"Classical Hall Vienna" :
-                  rdat=="07"?"Classical Hall Amsterdam" :
-                  rdat=="09"?"Classical Hall Freiburg" :
-                  rdat=="0B"?"Classical Chamber" :
-                  rdat=="0D"?"Live/Club Village Vanguard" :
-                  rdat=="11"?"Live/Club Warehouse Loft" :
-                  rdat=="0F"?"Live/Club Cellar Club" :
-                  rdat=="10"?"Live/Club The Roxy Theater" :
-                  rdat=="0E"?"Live/Club The Bottom Line" :
-                  rdat=="21"?"Entertainment Sports" :
-                  rdat=="1E"?"Entertainment Action Game" :
-                  rdat=="1F"?"Entertainment RPG" :
-                  rdat=="18"?"Entertainment Music Video" :
-                  rdat=="1C"?"Entertainment Recital/Opera" :
-                  rdat=="2D"?"Movie Standard" :
-                  rdat=="24"?"Movie Spectacle" :
-                  rdat=="25"?"Movie Sci-Fi" :
-                  rdat=="28"?"Movie Adventure" :
-                  rdat=="29"?"Movie Drama" :
-                  rdat=="20"?"Movie Mono" : "";
+                const char* prog = decode_surround_program(rdat);
                 if (*prog) id(surround_program_state).publish_state(prog);
                 continue;
               }

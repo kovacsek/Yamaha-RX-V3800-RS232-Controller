@@ -170,8 +170,11 @@ interval:
             uint8_t b;
             if (!id(yamaha_uart).read_byte(&b)) break;
 
-            // Start (01 oder 02) -> neuen Frame beginnen
-            if (b == 0x01 || b == 0x02) { cur.clear(); continue; }
+            // Start (SOH/STX bzw. DC1/DC2) -> neuen Frame beginnen
+            if (b == 0x01 || b == 0x02 || b == 0x11 || b == 0x12) {
+              cur.clear();
+              continue;
+            }
             // Ende (03) -> auswerten
             if (b == 0x03) {
               if (cur.empty()) continue;
@@ -189,11 +192,24 @@ interval:
                 raw_upper.push_back((char) toupper((unsigned char) ch));
               }
 
-              if (!raw_upper.empty() && raw_upper.rfind("CONFIG", 0) == 0) {
-                id(rxv_config_received) = true;
-                ESP_LOGI(TAG, "RX start response: %s", raw_upper.c_str());
-                id(last_report).publish_state(raw_upper);
-                continue;
+              if (!raw_upper.empty()) {
+                bool is_start_reply = false;
+                if (raw_upper.rfind("CONFIG", 0) == 0) {
+                  is_start_reply = true;
+                } else if (!id(rxv_config_received) && id(ready_attempts) > 0 && raw_upper[0] == 'S') {
+                  // Einige Geräte antworten auf READY mit einem "S0…"-Statusblock statt
+                  // des in älteren Protokolldokumenten genannten "CONFIG…"-Frames.
+                  // Sobald wir während des Handshakes so einen Block sehen, gilt READY
+                  // als bestätigt.
+                  is_start_reply = true;
+                }
+
+                if (is_start_reply) {
+                  id(rxv_config_received) = true;
+                  ESP_LOGI(TAG, "RX start response: %s", raw_upper.c_str());
+                  id(last_report).publish_state(raw_upper);
+                  continue;
+                }
               }
 
               // In bereinigte HEX-Großschrift wandeln
@@ -376,7 +392,10 @@ script:
           }
 
           ESP_LOGD(TAG, "TX start: %s%s", header.c_str(), body.c_str());
-          id(yamaha_uart).write_byte(0x02);
+          // Start commands such as READY use DC1 (0x11) as frame header according to
+          // the RX-Vx800 RS-232C protocol specification. Using STX (0x02) prevents the
+          // receiver from answering with the CONFIG frame during the handshake.
+          id(yamaha_uart).write_byte(0x11);
           id(yamaha_uart).write_str(header.c_str());
           id(yamaha_uart).write_str(body.c_str());
           id(yamaha_uart).write_byte(0x03);

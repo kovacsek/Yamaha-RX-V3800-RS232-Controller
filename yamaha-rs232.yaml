@@ -83,7 +83,7 @@ interval:
     then:
       - lambda: |-
           // ------------------------------------------
-          // Yamaha RX-V3800 RS232 Parser (ohne OSD-Text)
+          // Yamaha RX-V3800 RS232 Parser
           // ------------------------------------------
           static std::string cur, last;
           static uint32_t last_ts = 0;
@@ -118,47 +118,8 @@ interval:
               std::string up = hex_up(cur);
               cur.clear();
               if (up.size() < 4) continue;
-
-              // ---------- Spezialfälle ohne klassisches SW/RCMD: Verschiedenes ----------
-              // Zone3 Power & Pure Direct: Reports kommen als nackte Codes
-
-              if (up.rfind("8C00", 0) == 0) { id(last_report).publish_state("PURE_DIRECT_OFF"); continue; }
-              if (up.rfind("8C01", 0) == 0) { id(last_report).publish_state("PURE_DIRECT_ON");  continue; }
               
-              // ---------- Surround-Kurzform 4028dd ----------
-              if (up.size() >= 6 && up.rfind("4028", 0) == 0) {
-                std::string rdat = up.substr(4,2);
-                id(last_report).publish_state(std::string("28")+rdat);
-                const char* prog =
-                  rdat=="34"?"2Ch. Stereo" :
-                  rdat=="17"?"7Ch. Stereo" :
-                  rdat=="44"?"Straight Music Enhancer" :
-                  rdat=="45"?"7Ch. Music Enhancer" :
-                  rdat=="2C"?"Surround Decode Pro Logic" :
-                  rdat=="00"?"Classical Hall Munich" :
-                  rdat=="05"?"Classical Hall Vienna" :
-                  rdat=="07"?"Classical Hall Amsterdam" :
-                  rdat=="09"?"Classical Hall Freiburg" :
-                  rdat=="0B"?"Classical Chamber" :
-                  rdat=="0D"?"Live/Club Village Vanguard" :
-                  rdat=="11"?"Live/Club Warehouse Loft" :
-                  rdat=="0F"?"Live/Club Cellar Club" :
-                  rdat=="10"?"Live/Club The Roxy Theater" :
-                  rdat=="0E"?"Live/Club The Bottom Line" :
-                  rdat=="21"?"Entertainment Sports" :
-                  rdat=="1E"?"Entertainment Action Game" :
-                  rdat=="1F"?"Entertainment RPG" :
-                  rdat=="18"?"Entertainment Music Video" :
-                  rdat=="1C"?"Entertainment Recital/Opera" :
-                  rdat=="2D"?"Movie Standard" :
-                  rdat=="24"?"Movie Spectacle" :
-                  rdat=="25"?"Movie Sci-Fi" :
-                  rdat=="28"?"Movie Adventure" :
-                  rdat=="29"?"Movie Drama" :
-                  rdat=="20"?"Movie Mono" : "";
-                if (*prog) id(surround_program_state).publish_state(prog);
-                continue;
-              }
+              
               // ---------- Standard: RCMD/RDAT extrahieren ----------
               std::string rcmd, rdat;
 
@@ -194,21 +155,16 @@ interval:
                 else if (rdat == "05") { main_on=true;  z2_on=false; z3_on=true;  }
                 else if (rdat == "06") { main_on=false; z2_on=true;  z3_on=false; }
                 else if (rdat == "07") { main_on=false; z2_on=false; z3_on=true;  }
-                // Fallback: unbekannt -> nichts publishen
 
                 id(main_power_state).publish_state(main_on);
                 id(zone2_power_state).publish_state(z2_on);
-                // Zone3 publishen, falls Entity existiert
-                #ifdef USE_BINARY_SENSOR
                 id(zone3_power_state).publish_state(z3_on);
-                #endif
 
                 id(last_report).publish_state(std::string("20") + rdat);
                 continue;
               }
 
-
-              // Main Inputs (21) – aus deiner Liste
+              // Main Inputs (21)
               if (rcmd == "21") {
                 const char* name =
                   rdat=="0D"?"Net/USB" :
@@ -227,22 +183,14 @@ interval:
                 if (*name) id(input_state).publish_state(name);
                 continue;
               }
-              // ----- MUTE REPORTS (Operation Report) -----
-              // MAIN MUTE (23xx): 00 = OFF, 01 = ON
+              // ----- MUTE REPORTS -----
+              // MAIN MUTE (23): 00 = OFF, 01 = ON
               if (rcmd == "23") {
                 const bool on = (rdat == "01");
                 id(main_mute_state).publish_state(on);
                 continue;
               }
-
-              // ZONE2 MUTE (25xx): 00 = OFF, 01 = ON
-              if (rcmd == "25") {
-                const bool on = (rdat == "01");
-                id(zone2_mute_state).publish_state(on);
-                continue;
-              }
-              
-              // Zone2 Inputs (24) – aus deiner Liste
+              // Zone2 Inputs (24)
               if (rcmd == "24") {
                 const char* name =
                   rdat=="0D"?"Net/USB" :
@@ -261,7 +209,19 @@ interval:
                 if (*name) id(zone2_input_state).publish_state(name);
                 continue;
               }
-              // Main Volume (26) – RX-V3800 Skala: 0x27..0xE8 = -80.0..+16.5 dB (0.5 dB Schritte)
+              // ZONE2 MUTE (25): 00 = OFF, 01 = ON
+              if (rcmd == "25") {
+                const bool on = (rdat == "01");
+                id(zone2_mute_state).publish_state(on);
+                continue;
+              }
+              // ZONE3 MUTE (A1): 00 = OFF, 01 = ON
+              if (rcmd == "A1") {
+                const bool on = (rdat == "01");
+                id(zone3_mute_state).publish_state(on);
+                continue;
+              }
+              // Main Volume (26) – 0x27..0xE8 = -80.0..+16.5 dB (0.5 dB Schritte)
               if (rcmd == "26") {
                 int v = strtol(rdat.c_str(), nullptr, 16);          // 0x27..0xE8
                 float db = ((float)v - 0x27) * 0.5f - 80.0f;        // 0x27->-80.0, 0xE8->+16.5
@@ -275,8 +235,7 @@ interval:
                 id(zone2_volume_state).publish_state(db);
                 continue;
               }
-
-              // Surround (28) – aus deiner Liste
+              // Surround Modes (28)
               if (rcmd == "28") {
                 const char* prog =
                   rdat=="34"?"2Ch. Stereo" :
@@ -309,7 +268,7 @@ interval:
                 continue;
               }
 
-              // OSD Status (2B) – belassen wie gehabt
+              // OSD Status (2B)
               if (rcmd == "2B") {
                 const char* s = rdat=="00"?"Full" : rdat=="01"?"Short" : rdat=="02"?"Off" : "";
                 if (*s) id(osd_state).publish_state(s);
@@ -539,8 +498,8 @@ text:
     id: yamaha_cmd_text
     name: "Yamaha RS232 Body (HEX)"
     optimistic: true
-    min_length: 4
-    max_length: 4
+    min_length: 2
+    max_length: 16
     mode: text
 number:
   - platform: template
@@ -718,7 +677,3 @@ text_sensor:
     id: last_report
     name: "Yamaha Report Raw"
     icon: mdi:console-line
-
-
-
-

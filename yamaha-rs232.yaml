@@ -14,7 +14,11 @@ wifi:
   ap:
     ssid: $device_name
     password: !secret fallbackap_password
-
+  manual_ip: 
+    static_ip: 192.168.40.62
+    subnet: 255.255.255.0
+    gateway: 192.168.40.1
+    dns1: 192.168.40.1
 web_server:
 
 captive_portal:
@@ -196,6 +200,7 @@ interval:
                 bool is_start_reply = false;
                 if (raw_upper.rfind("CONFIG", 0) == 0) {
                   is_start_reply = true;
+
                 } else if (!id(rxv_config_received) && id(ready_attempts) > 0) {
                   if (raw_upper[0] == 'S') {
                     // Einige Geräte antworten auf READY mit einem "S0…"-Statusblock statt
@@ -210,6 +215,7 @@ interval:
                     // und weitere READY-Versuche beendet werden.
                     is_start_reply = true;
                   }
+
                 }
 
                 if (is_start_reply) {

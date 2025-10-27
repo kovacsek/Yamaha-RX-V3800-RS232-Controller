@@ -109,8 +109,8 @@ interval:
           auto decode_input = [](const std::string &code) -> const char* {
             struct Entry { const char* code; const char* name; };
             static const Entry entries[] = {
-              {"0D", "Net/USB"},
-              {"0C", "V-Aux"},
+              {"0D", "NET/USB"},
+              {"0C", "V-AUX"},
               {"09", "VCR"},
               {"0A", "DVR"},
               {"06", "DTV/CBL"},
@@ -121,7 +121,7 @@ interval:
               {"01", "CD"},
               {"00", "PHONO"},
               {"10", "Multi"},
-              {"02", "Tuner"},
+              {"02", "TUNER"},
             };
             for (const auto &entry : entries) {
               if (code == entry.code) {

@@ -200,12 +200,22 @@ interval:
                 bool is_start_reply = false;
                 if (raw_upper.rfind("CONFIG", 0) == 0) {
                   is_start_reply = true;
-                } else if (!id(rxv_config_received) && id(ready_attempts) > 0 && raw_upper[0] == 'S') {
-                  // Einige Geräte antworten auf READY mit einem "S0…"-Statusblock statt
-                  // des in älteren Protokolldokumenten genannten "CONFIG…"-Frames.
-                  // Sobald wir während des Handshakes so einen Block sehen, gilt READY
-                  // als bestätigt.
-                  is_start_reply = true;
+
+                } else if (!id(rxv_config_received) && id(ready_attempts) > 0) {
+                  if (raw_upper[0] == 'S') {
+                    // Einige Geräte antworten auf READY mit einem "S0…"-Statusblock statt
+                    // des in älteren Protokolldokumenten genannten "CONFIG…"-Frames.
+                    // Sobald wir während des Handshakes so einen Block sehen, gilt READY
+                    // als bestätigt.
+                    is_start_reply = true;
+                  } else if (raw_upper[0] == 'R' && raw_upper.size() >= 2 && raw_upper[1] >= '0' && raw_upper[1] <= '9') {
+                    // RX-V3800 Hardware antwortet mit einem "R0…"-Block (Status Report),
+                    // der jedoch ebenfalls unmittelbar nach READY gesendet wird. Akzeptiere
+                    // diesen Block als Handshake-Bestätigung, damit das Flag gesetzt wird
+                    // und weitere READY-Versuche beendet werden.
+                    is_start_reply = true;
+                  }
+
                 }
 
                 if (is_start_reply) {

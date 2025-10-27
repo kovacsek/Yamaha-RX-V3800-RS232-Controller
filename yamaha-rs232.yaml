@@ -1,6 +1,7 @@
 substitutions:
   device_name: yamahars232
   friendly_name: YamahaRS232
+  ready_timeout: "000"
   
 logger:
   level: DEBUG
@@ -31,15 +32,30 @@ esphome:
   name: ${device_name}
   friendly_name: ${friendly_name}
 
-  # ===== Boot-Init: Reports aktivieren & Delay setzen =====
+  # ===== Boot-Init: READY-Handshake gemäß Protokoll =====
   on_boot:
     priority: -10
     then:
-      - delay: 1s
-      # Optionaler Status-Pull (Operation): 7A7F
-      - script.execute: { id: send_op, code: "7A7F" }
-      - delay: 200ms
-      - script.execute: { id: send_op, code: "7A7F" }
+      - lambda: |-
+          id(rxv_config_received) = false;
+          id(ready_attempts) = 0;
+          id(ready_last_send) = 0;
+      - delay: 500ms
+      - script.execute: send_ready
+
+globals:
+  - id: rxv_config_received
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+  - id: ready_attempts
+    type: int
+    restore_value: no
+    initial_value: '0'
+  - id: ready_last_send
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'
 
 uart:
   id: yamaha_uart
@@ -160,13 +176,28 @@ interval:
             if (b == 0x03) {
               if (cur.empty()) continue;
 
+              std::string raw = cur;
+              cur.clear();
+
               // Debounce
-              if (cur == last && (now - last_ts) < 50) { cur.clear(); continue; }
-              last = cur; last_ts = now;
+              if (raw == last && (now - last_ts) < 50) { continue; }
+              last = raw; last_ts = now;
+
+              std::string raw_upper;
+              raw_upper.reserve(raw.size());
+              for (char ch : raw) {
+                raw_upper.push_back((char) toupper((unsigned char) ch));
+              }
+
+              if (!raw_upper.empty() && raw_upper.rfind("CONFIG", 0) == 0) {
+                id(rxv_config_received) = true;
+                ESP_LOGI(TAG, "RX start response: %s", raw_upper.c_str());
+                id(last_report).publish_state(raw_upper);
+                continue;
+              }
 
               // In bereinigte HEX-Großschrift wandeln
-              std::string up = hex_up(cur);
-              cur.clear();
+              std::string up = hex_up(raw);
               if (up.size() < 4) continue;
 
               ESP_LOGV(TAG, "RX frame: %s", up.c_str());
@@ -282,11 +313,98 @@ interval:
           }
 
 
+  - interval: 1s
+    then:
+      - lambda: |-
+          if (id(rxv_config_received)) {
+            return;
+          }
+          if (id(ready_attempts) >= 5) {
+            return;
+          }
+          id(send_ready).execute();
+
+
 
 # --------------------------------------------------
 # SCRIPTS: Sender
 # --------------------------------------------------
 script:
+  # Start Commands (READY, ...)
+  - id: send_start_command
+    parameters:
+      name: string
+      payload: string
+    then:
+      - lambda: |-
+          const char* TAG = "yamaha_rs232";
+          auto sanitize_letters = [](const std::string &in) -> std::string {
+            std::string out;
+            out.reserve(in.size());
+            for (char ch : in) {
+              char c = (char) toupper((unsigned char) ch);
+              if (c >= 'A' && c <= 'Z') {
+                out.push_back(c);
+              }
+            }
+            return out;
+          };
+          auto sanitize_hex = [](const std::string &in) -> std::string {
+            std::string out;
+            out.reserve(in.size());
+            for (char ch : in) {
+              char c = (char) toupper((unsigned char) ch);
+              if ((c >= '0' && c <= '9') || (c >= 'A' && c <= 'F')) {
+                out.push_back(c);
+              }
+            }
+            return out;
+          };
+
+          std::string header = sanitize_letters(name);
+          std::string body = sanitize_hex(payload);
+
+          if (header.empty()) {
+            ESP_LOGW(TAG, "Ignoring start command with empty header");
+            return;
+          }
+          if (body.empty()) {
+            body = "000";
+          }
+          if (body.size() < 3) {
+            body.insert(body.begin(), 3 - body.size(), '0');
+          }
+
+          ESP_LOGD(TAG, "TX start: %s%s", header.c_str(), body.c_str());
+          id(yamaha_uart).write_byte(0x02);
+          id(yamaha_uart).write_str(header.c_str());
+          id(yamaha_uart).write_str(body.c_str());
+          id(yamaha_uart).write_byte(0x03);
+          id(yamaha_uart).write_str("\r\n");
+
+  - id: send_ready
+    then:
+      - lambda: |-
+          const char* TAG = "yamaha_rs232";
+          if (id(rxv_config_received)) {
+            ESP_LOGV(TAG, "Skipping READY because configuration is already received");
+            return;
+          }
+          if (id(ready_attempts) >= 5) {
+            ESP_LOGW(TAG, "READY handshake attempts exhausted");
+            return;
+          }
+
+          const uint32_t now = millis();
+          if (now - id(ready_last_send) < 900) {
+            return;
+          }
+
+          id(ready_last_send) = now;
+          id(ready_attempts) += 1;
+          ESP_LOGI(TAG, "TX start: READY attempt %d", id(ready_attempts));
+          id(send_start_command).execute("READY", "${ready_timeout}");
+
   # Gemeinsamer Rahmenaufbau (STX + SW + Payload + ETX + CR/LF)
   - id: send_frame
     parameters:
@@ -295,6 +413,9 @@ script:
     then:
       - lambda: |-
           const char* TAG = "yamaha_rs232";
+          if (!id(rxv_config_received) && id(ready_attempts) > 0) {
+            ESP_LOGW(TAG, "Sending control frame before READY handshake completed");
+          }
           auto sanitize_hex = [](const std::string &in) -> std::string {
             std::string out;
             out.reserve(in.size());

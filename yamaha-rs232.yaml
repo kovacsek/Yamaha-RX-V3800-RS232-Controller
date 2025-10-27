@@ -14,7 +14,11 @@ wifi:
   ap:
     ssid: $device_name
     password: !secret fallbackap_password
-
+  manual_ip: 
+    static_ip: 192.168.40.62
+    subnet: 255.255.255.0
+    gateway: 192.168.40.1
+    dns1: 192.168.40.1
 web_server:
 
 captive_portal:

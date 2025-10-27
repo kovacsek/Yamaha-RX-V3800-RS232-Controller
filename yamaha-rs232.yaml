@@ -841,10 +841,10 @@ select:
     set_action:
       - lambda: |-
           std::string s = x, cmd;
-          if (s=="PC/MCX") cmd="0F7F0136C9";
-          else if (s=="NET RADIO") cmd="0F7F0137C8";
-          else if (s=="USB") cmd="0F7F0138C7";
-          if (!cmd.empty()) id(send_op).execute(cmd);
+          if (s=="PC/MCX") cmd="9B00";
+          else if (s=="NET RADIO") cmd="9B01";
+          else if (s=="USB") cmd="9B02";
+          if (!cmd.empty()) id(send_sys).execute(cmd);
   - platform: template
     id: netusb_repeat_select
     name: "NET/USB Repeat"

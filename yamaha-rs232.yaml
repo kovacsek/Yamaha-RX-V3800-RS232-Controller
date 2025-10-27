@@ -170,8 +170,11 @@ interval:
             uint8_t b;
             if (!id(yamaha_uart).read_byte(&b)) break;
 
-            // Start (01 oder 02) -> neuen Frame beginnen
-            if (b == 0x01 || b == 0x02) { cur.clear(); continue; }
+            // Start (SOH/STX bzw. DC1/DC2) -> neuen Frame beginnen
+            if (b == 0x01 || b == 0x02 || b == 0x11 || b == 0x12) {
+              cur.clear();
+              continue;
+            }
             // Ende (03) -> auswerten
             if (b == 0x03) {
               if (cur.empty()) continue;
@@ -376,7 +379,10 @@ script:
           }
 
           ESP_LOGD(TAG, "TX start: %s%s", header.c_str(), body.c_str());
-          id(yamaha_uart).write_byte(0x02);
+          // Start commands such as READY use DC1 (0x11) as frame header according to
+          // the RX-Vx800 RS-232C protocol specification. Using STX (0x02) prevents the
+          // receiver from answering with the CONFIG frame during the handshake.
+          id(yamaha_uart).write_byte(0x11);
           id(yamaha_uart).write_str(header.c_str());
           id(yamaha_uart).write_str(body.c_str());
           id(yamaha_uart).write_byte(0x03);

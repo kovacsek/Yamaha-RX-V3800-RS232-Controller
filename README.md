@@ -20,7 +20,7 @@ I implemented many control codes, you can add more if you wish.
 * You need a MAX232 adapter and an ESPHome compatible microcontroller, i used a ESP32.
   * I plugged my adaptor (which has a male connector? the one with pins) directly into the receiver without using a cable. 
   * Flow Control (RTS/CTS) isn't used.
-*You also need to enable RS232 in standby in the advanced setup.
+* You also need to enable RS232 in standby in the advanced setup:
   * Power the unit off with the little MASTER Switch.
   * Hold the STRAIGHT button behind the front lid
   * While still holding it, power it on with the MASTER switch.

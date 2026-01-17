@@ -1,4 +1,4 @@
-ESPHome config for Yamaha RX-V3800 RS232 Control 
+# ESPHome config for Yamaha RX-V3800 RS232 Control 
 
 ## Notes:
 I didn't get the network control to work, so i made this. Works to my satisfaction for RX-V 3800 and supposedly the RX-V1800.
@@ -30,3 +30,6 @@ Tip: The IR remote codes are the same as the RS232 codes and their lists are way
 ** Press the bigger On/Off butten to boot normally, or just switch it off and on again. 
 * ESPHome, at least to compile and flash the Firmware.
 ** Although this works standalone as it has a built in webserver, a home automation server like HomeAssistant gives this project much more sense. 
+
+## AI Disclaimer
+I used AI to make this (Codex), but also invested much manual work to get it to this state.

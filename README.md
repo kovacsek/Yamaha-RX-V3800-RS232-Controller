@@ -2,18 +2,17 @@
 
 ## Notes:
 I didn't get the network control to work, so i made this. Works to my satisfaction for RX-V 3800 and supposedly the RX-V1800.
+
 I implemented many control codes, you can add more if you wish. 
-
-Many of the codes differ between the models, something like the RX-V3900 has different ones for the surround modes and so on. But the protocol for the pre-2010 models should have stayed the same.
-Tip: The IR remote codes are the same as the RS232 codes and their lists are way easier to find.
-
+* Many of the codes differ between the models, something like the RX-V3900 has different ones for the surround modes and so on. But the protocol for the pre-2010 models should have stayed the same.
+* Tip: The IR remote codes are the same as the RS232 codes and their lists are way easier to find and make sense of. Of course I realised this pretty late.
 
 ## These parameters are controllable and give feedback:
 * Power On/Off: Everything, Main, Zone2, Zone3
-* Volume Main, Zone2
 * Mute On/Off/Toggle: Main, Zone2, Zone3
-* Surround Modes
-* Input Select Main, Zone2, Zone3
+* Input Select: Main, Zone2, Zone3
+* Volume Level: Main, Zone2
+* All Surround Modes
 * GUI Menu Navigation
 * USB/Internet Radio/Network Menu Navigation
 

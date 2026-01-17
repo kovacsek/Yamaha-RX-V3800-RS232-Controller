@@ -18,17 +18,17 @@ I implemented many control codes, you can add more if you wish.
 
 ## Prerequisites:
 * You need a MAX232 adapter and an ESPHome compatible microcontroller, i used a ESP32.
-** I plugged my adaptor (which has a male connector? the one with pins) directly into the receiver without using a cable. 
-** Flow Control (RTS/CTS) isn't used.
+  * I plugged my adaptor (which has a male connector? the one with pins) directly into the receiver without using a cable. 
+  * Flow Control (RTS/CTS) isn't used.
 *You also need to enable RS232 in standby in the advanced setup.
-** Power the unit off with the little MASTER Switch.
-** Hold the STRAIGHT button behind the front lid
-** While still holding it, power it on with the MASTER switch.
-** When you see Advanced Setup on the Display, release the STRAIGHT button.
-** Navigate to the RS232 entry with the Input Select knob and change it to Yes with the Program knob
-** Press the bigger On/Off butten to boot normally, or just switch it off and on again. 
+  * Power the unit off with the little MASTER Switch.
+  * Hold the STRAIGHT button behind the front lid
+  * While still holding it, power it on with the MASTER switch.
+  * When you see Advanced Setup on the Display, release the STRAIGHT button.
+  * Navigate to the RS232 entry with the Input Select knob and change it to Yes with the Program knob
+  * Press the bigger On/Off butten to boot normally, or just switch it off and on again. 
 * ESPHome, at least to compile and flash the Firmware.
-** Although this works standalone as it has a built in webserver, a home automation server like HomeAssistant gives this project much more sense. 
+  * Although this works standalone as it has a built in webserver, a home automation server like HomeAssistant gives this project much more sense. 
 
 ## AI Disclaimer
 I used AI to make this (Codex), but also invested much manual work to get it to this state.

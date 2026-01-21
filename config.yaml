@@ -1,0 +1,69 @@
+# ==========================================================
+# CONNECTION SETTINGS
+# ==========================================================
+connection:
+  serial_port: "/dev/ttyS4"
+  baud_rate: 9600
+  tcp_port: 9999
+  host: "0.0.0.0"
+
+# ==========================================================
+# UNIFIED FUNCTION MAP
+# Format: NAME: ["COMMAND_HEX", "REPORT_SUFFIX"]
+# Leave suffix empty ("") if no report exists for that command.
+# ==========================================================
+functions:
+  # --- POWER ---
+  POWER_ON:          ["7E7E", "02002"]
+  POWER_OFF:         ["7E7F", "02000"]
+  POWER_TOGGLE:      ["7E80", ""]
+  ZONE2_POWER_ON:    ["7EBA", "02021"]
+  ZONE2_POWER_OFF:   ["7EBB", "02020"]
+  ZONE3_POWER_ON:    ["7EB4", ""]
+  ZONE3_POWER_OFF:   ["7EB5", ""]
+
+  # --- VOLUME & MUTE ---
+  VOL_UP:            ["7A1A", ""]
+  VOL_DOWN:          ["7A1B", ""]
+  MUTE_KEY:          ["7A1C", ""]
+  MUTE_ON:           ["7A1D", "02301"]
+  MUTE_OFF:          ["7A1E", "02300"]
+  ZONE2_VOL_UP:      ["7A87", ""]
+  ZONE2_VOL_DOWN:    ["7A88", ""]
+  ZONE2_MUTE:        ["7A89", "02321"] # Assuming standard offset
+
+  # --- INPUTS (Main Zone) ---
+  INPUT_PHONO:       ["7A00", "02100"]
+  INPUT_CD:          ["7A01", "02101"]
+  INPUT_TUNER:       ["7A02", "02102"]
+  INPUT_CD_R:        ["7A03", "02103"]
+  INPUT_MD_TAPE:     ["7A04", "02104"]
+  INPUT_DVD:         ["7AC1", "02105"]
+  INPUT_DTV:         ["7AC2", "02106"]
+  INPUT_VCR:         ["7A0F", "02108"]
+  INPUT_DVR:         ["7A11", "0210A"]
+  INPUT_V_AUX:       ["7A12", "0210B"]
+  INPUT_DOCK:        ["7A14", "0210C"]
+  INPUT_NET_USB:     ["7A15", "0210D"]
+  INPUT_MULTI:       ["7A16", "0210E"]
+
+  # --- HDMI DIRECT ---
+  INPUT_HDMI_1:      ["7A50", ""]
+  INPUT_HDMI_2:      ["7A51", ""]
+  INPUT_HDMI_3:      ["7A52", ""]
+  INPUT_HDMI_4:      ["7A53", ""]
+
+  # --- DSP MODES ---
+  DSP_STRAIGHT:      ["7A19", ""]
+  DSP_STEREO_2CH:    ["7A17", ""]
+  DSP_STEREO_7CH:    ["7A18", ""]
+  DSP_PURE_DIRECT:   ["7E2C", ""]
+
+  # --- TUNER CONTROL ---
+  TUNER_PRESET_UP:   ["7B0C", ""]
+  TUNER_PRESET_DOWN: ["7B0D", ""]
+  TUNER_PAGE_A:      ["7B21", ""]
+  TUNER_PAGE_B:      ["7B22", ""]
+  TUNER_PAGE_C:      ["7B23", ""]
+  TUNER_PAGE_D:      ["7B24", ""]
+  TUNER_PAGE_E:      ["7B25", ""]

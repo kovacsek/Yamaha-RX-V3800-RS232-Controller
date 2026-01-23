@@ -6,6 +6,7 @@ import queue
 import sys
 import yaml
 import os
+import re
 
 class YamahaAVRDaemon:
     def __init__(self, config_file='config.yaml'):
@@ -15,14 +16,12 @@ class YamahaAVRDaemon:
         self.tcp_port = self.config['connection']['tcp_port']
         self.tcp_host = self.config['connection']['host']
 
-        self.commands = {}
-        self.reports = {}
-        # Map friendly names to Hex and Hex suffixes to names
-        for name, codes in self.config.get('functions', {}).items():
-            if isinstance(codes, list) and len(codes) == 2:
-                cmd_hex, report_hex = codes
-                if cmd_hex: self.commands[name] = cmd_hex
-                if report_hex: self.reports[report_hex] = name
+        # Load command functions, system commands, and report mappings
+        self.commands = self.config.get('functions', {})
+        self.system = self.config.get('system', {})
+        # Reverse reports map: convert from NAME: "HEX" to HEX: NAME for lookup
+        reports_config = self.config.get('reports', {})
+        self.reports = {v: k for k, v in reports_config.items()}
 
         # 2. State Resources
         self.ser = None
@@ -44,8 +43,8 @@ class YamahaAVRDaemon:
         with open(filepath, 'r') as f: return yaml.safe_load(f)
 
     def broadcast(self, msg):
-        """Sends status updates to all connected TCP clients (Node-RED)"""
-        print(msg)
+        """Sends updates to TCP clients. Heartbeats are hidden from local console."""
+        if not "Heartbeat" in msg: print(msg)
         with self.clients_lock:
             for c in self.clients[:]:
                 try:
@@ -75,21 +74,20 @@ class YamahaAVRDaemon:
 
     def send_raw_packet(self, sw_byte, data_str):
         if not self.ser: return
+        # Packet Assembly: STX + Switch + Data + ETX
         packet = self.STX + sw_byte + data_str.encode('ascii') + self.ETX
         self.ser.write(packet)
         print(f"[TX] Sent: {packet}")
 
     def run_serial_worker(self):
-        # Initialize heartbeat timer
         last_heartbeat = time.time()
         print("[WORKER] Serial thread started.")
-        
         while self.running:
             if self.ser is None:
                 if self.open_serial(): self.perform_handshake()
                 else: time.sleep(5); continue
 
-            # --- HEARTBEAT LOGIC (Every 60s) ---
+            # --- HEARTBEAT (60s) ---
             if time.time() - last_heartbeat > 60:
                 self.broadcast("[SYSTEM     ] PONG (Heartbeat)")
                 last_heartbeat = time.time()
@@ -115,27 +113,35 @@ class YamahaAVRDaemon:
                             if stx_idx != -1:
                                 payload = raw[stx_idx+1 : -1].decode('ascii', errors='ignore')
                                 if not payload: continue
-                                
-                                # Set ready if any valid response is seen
                                 if not self.is_ready and payload[0] in ['0', '1', '2', '4']:
                                     self.is_ready = True
 
+                                # Extract source (first digit: 0-4) and report code (next 5 digits)
                                 src = payload[0]
+                                if not re.match(r'^[0-4]', src):
+                                    continue
+                                
                                 tag_map = {
-                                    "1": "[REMOTE     ]",
+                                    "0": "[SERIAL]",
+                                    "1": "[REMOTE]",
                                     "2": "[FRONT PANEL]",
-                                    "4": "[VOLUME KNOB]",
-                                    "0": "[SERIAL     ]"
+                                    "3": "[SYSTEM]",
+                                    "4": "[VOLUME KNOB]"
+                                    
                                 }
                                 tag = tag_map.get(src, f"[{src}]")
-                                suffix = payload[1:]
-
-                                if suffix in self.reports:
-                                    self.broadcast(f"{tag} {self.reports[suffix]} (Hex: {payload})")
-                                elif payload[1:4] == "026":
-                                    db = (int(payload[4:], 16) * 0.5) - 99.5
-                                    self.broadcast(f"{tag} VOLUME: {db:.1f} dB (Hex: {payload})")
-                                elif not payload.startswith('3'):
+                                
+                                # Extract 4-digit report code for lookup (skip first digit which is source)
+                                report_code = payload[2:6] if len(payload) >= 6 else payload[2:]
+                                
+                                if report_code in self.reports:
+                                    self.broadcast(f"{tag} {self.reports[report_code]} (Hex: {payload})")
+                                elif payload[1:4] == "026": # Volume Report ID
+                                    try:
+                                        db = (int(payload[4:], 16) * 0.5) - 99.5
+                                        self.broadcast(f"{tag} VOLUME: {db:.1f} dB (Hex: {payload})")
+                                    except: pass
+                                else:
                                     self.broadcast(f"{tag} RAW: {payload}")
                 except:
                     self.is_ready = False
@@ -143,21 +149,42 @@ class YamahaAVRDaemon:
 
             # --- WRITE LOOP ---
             try:
-                cmd = self.command_queue.get(timeout=0.05).strip().upper()
-                if cmd == "POWER_ON":
-                    # Special wake-up sequence for standby mode
+                line = self.command_queue.get(timeout=0.05).strip().upper()
+
+                if line == "POWER_ON":
                     self.ser.write(self.DC1 + b'000' + self.ETX)
                     time.sleep(0.2)
                     self.send_raw_packet(b'0', self.commands['POWER_ON'])
-                elif cmd in self.config.get('requests', {}):
-                    self.send_raw_packet(b'2', self.config['requests'][cmd])
-                elif self.is_ready and cmd in self.commands:
-                    self.send_raw_packet(b'0', self.commands[cmd])
-                elif not self.is_ready and cmd in self.commands:
+
+                elif line.startswith("SET_VOL_"):
+                    try:
+                        target_db = float(line.replace("SET_VOL_", ""))
+
+                        # 1. Calculate Hex: (dB + 99.5) * 2
+                        # 2. Format as 2-digit Hex (e.g., 77)
+                        hex_val = format(int((target_db + 99.5) * 2), '02X')
+
+                        # 3. Build Packet: Switch '2' + Command '30' + Hex Data
+                        # This results in \x02 + 2 + 30 + 77 + \x03
+                        self.send_raw_packet(b'2', f"30{hex_val}")
+                    except Exception as e:
+                        print(f"[ERROR] Volume calculation failed: {e}")
+
+                elif line in self.config.get('requests', {}):
+                    self.send_raw_packet(b'2', self.config['requests'][line])
+
+                elif line in self.system:
+                    # System commands use switch byte '2'
+                    self.send_raw_packet(b'2', self.system[line])
+
+                elif self.is_ready and line in self.commands:
+                    # Function commands use switch byte '0'
+                    self.send_raw_packet(b'0', self.commands[line])
+
+                elif not self.is_ready and line != "":
                     if self.perform_handshake():
-                        self.send_raw_packet(b'0', self.commands[cmd])
-                    else:
-                        self.command_queue.put(cmd)
+                        self.command_queue.put(line)
+
             except queue.Empty: pass
 
     def handle_client(self, client, addr):
@@ -181,21 +208,16 @@ class YamahaAVRDaemon:
     def start_tcp_listener(self):
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        
-        # --- SAFE KEEP-ALIVE CONFIGURATION ---
-        try:
+        try: # Safe Keep-Alive
             self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
-            # Linux specific idle timer tuning (60 seconds)
             for opt in ['TCP_KEEPIDLE', 'TCP_KEEPALIVE']:
                 if hasattr(socket, opt):
                     self.server_socket.setsockopt(socket.IPPROTO_TCP, getattr(socket, opt), 60)
         except: pass
-
         self.server_socket.bind((self.tcp_host, self.tcp_port))
         self.server_socket.listen(5)
         self.server_socket.settimeout(1.0)
         print(f"[TCP] Listening on {self.tcp_port} (Heartbeat Every 60s)...")
-        
         while self.running:
             try:
                 client, addr = self.server_socket.accept()
@@ -203,24 +225,16 @@ class YamahaAVRDaemon:
             except socket.timeout: continue
 
     def close_all(self):
-        print("\n[SYSTEM] Shutting down...")
-        self.running = False
+        print("\n[SYSTEM] Shutting down..."); self.running = False
         if self.ser: self.ser.close()
         if self.server_socket: self.server_socket.close()
         with self.clients_lock:
-            for c in self.clients:
-                try: c.close()
-                except: pass
+            for c in self.clients: c.close()
 
 if __name__ == "__main__":
     daemon = YamahaAVRDaemon()
     worker = threading.Thread(target=daemon.run_serial_worker, daemon=True)
     worker.start()
-    try:
-        daemon.start_tcp_listener()
-    except KeyboardInterrupt:
-        pass
-    finally:
-        daemon.close_all()
-        worker.join(timeout=2.0)
-        print("[SYSTEM] Exited cleanly.")
+    try: daemon.start_tcp_listener()
+    except KeyboardInterrupt: pass
+    finally: daemon.close_all(); worker.join(timeout=2.0); print("[SYSTEM] Exited cleanly.")

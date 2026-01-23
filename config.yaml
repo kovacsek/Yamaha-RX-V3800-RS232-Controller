@@ -2,68 +2,298 @@
 # CONNECTION SETTINGS
 # ==========================================================
 connection:
-  serial_port: "/dev/ttyS4"
+  serial_port: "/dev/ttyS0"
   baud_rate: 9600
   tcp_port: 9999
   host: "0.0.0.0"
 
 # ==========================================================
-# UNIFIED FUNCTION MAP
-# Format: NAME: ["COMMAND_HEX", "REPORT_SUFFIX"]
-# Leave suffix empty ("") if no report exists for that command.
+# FUNCTION MAP - COMMANDS
+# Maps friendly names to command hex values
 # ==========================================================
 functions:
+
   # --- POWER ---
-  POWER_ON:          ["7E7E", "02002"]
-  POWER_OFF:         ["7E7F", "02000"]
-  POWER_TOGGLE:      ["7E80", ""]
-  ZONE2_POWER_ON:    ["7EBA", "02021"]
-  ZONE2_POWER_OFF:   ["7EBB", "02020"]
-  ZONE3_POWER_ON:    ["7EB4", ""]
-  ZONE3_POWER_OFF:   ["7EB5", ""]
+  POWER_ON:          "7E7E"
+  POWER_OFF:         "7E7F"
+  POWER_TOGGLE:      "7E80"
+  ZONE2_POWER_ON:    "7EBA"
+  ZONE2_POWER_OFF:   "7EBB"
+  ZONE3_POWER_ON:    "7EB4"
+  ZONE3_POWER_OFF:   "7EB5"
 
   # --- VOLUME & MUTE ---
-  VOL_UP:            ["7A1A", ""]
-  VOL_DOWN:          ["7A1B", ""]
-  MUTE_KEY:          ["7A1C", ""]
-  MUTE_ON:           ["7A1D", "02301"]
-  MUTE_OFF:          ["7A1E", "02300"]
-  ZONE2_VOL_UP:      ["7A87", ""]
-  ZONE2_VOL_DOWN:    ["7A88", ""]
-  ZONE2_MUTE:        ["7A89", "02321"] # Assuming standard offset
+  VOL_UP:            "7A1A"
+  VOL_DOWN:          "7A1B"
+  MUTE_KEY:          "7A1C"
+  MUTE_ON:           "7A1D"
+  MUTE_OFF:          "7A1E"
+  ZONE2_VOL_UP:      "7A87"
+  ZONE2_VOL_DOWN:    "7A88"
+  ZONE2_MUTE:        "7A89"
 
   # --- INPUTS (Main Zone) ---
-  INPUT_PHONO:       ["7A00", "02100"]
-  INPUT_CD:          ["7A01", "02101"]
-  INPUT_TUNER:       ["7A02", "02102"]
-  INPUT_CD_R:        ["7A03", "02103"]
-  INPUT_MD_TAPE:     ["7A04", "02104"]
-  INPUT_DVD:         ["7AC1", "02105"]
-  INPUT_DTV:         ["7AC2", "02106"]
-  INPUT_VCR:         ["7A0F", "02108"]
-  INPUT_DVR:         ["7A11", "0210A"]
-  INPUT_V_AUX:       ["7A12", "0210B"]
-  INPUT_DOCK:        ["7A14", "0210C"]
-  INPUT_NET_USB:     ["7A15", "0210D"]
-  INPUT_MULTI:       ["7A16", "0210E"]
+  INPUT_PHONO:       "7A14"
+  INPUT_CD:          "7A15"
+  INPUT_TUNER:       "7A16"
+  INPUT_CD_R:        "7A19"
+  INPUT_MD_TAPE:     "7A18"
+  INPUT_BD_HD_DVD:   "7AC8"
+  INPUT_DVD:         "7AC1"
+  INPUT_DTV_CBL:     "7A54"
+  INPUT_CBL_SAT:     "7AC0"
+  INPUT_VCR:         "7A0F"
+  INPUT_DVR:         "7A13"
+  INPUT_V_AUX_DOCK:  "7A55"
+  INPUT_MULTI_CH:    "7A87"
 
   # --- HDMI DIRECT ---
-  INPUT_HDMI_1:      ["7A50", ""]
-  INPUT_HDMI_2:      ["7A51", ""]
-  INPUT_HDMI_3:      ["7A52", ""]
-  INPUT_HDMI_4:      ["7A53", ""]
+  INPUT_HDMI_1:      "7A50"
+  INPUT_HDMI_2:      "7A51"
+  INPUT_HDMI_3:      "7A52"
+  INPUT_HDMI_4:      "7A53"
 
   # --- DSP MODES ---
-  DSP_STRAIGHT:      ["7A19", ""]
-  DSP_STEREO_2CH:    ["7A17", ""]
-  DSP_STEREO_7CH:    ["7A18", ""]
-  DSP_PURE_DIRECT:   ["7E2C", ""]
+  DSP_STRAIGHT:      "7A19"
+  DSP_STEREO_2CH:    "7A17"
+  DSP_STEREO_7CH:    "7A18"
+  DSP_PURE_DIRECT:   "7E2C"
 
   # --- TUNER CONTROL ---
-  TUNER_PRESET_UP:   ["7B0C", ""]
-  TUNER_PRESET_DOWN: ["7B0D", ""]
-  TUNER_PAGE_A:      ["7B21", ""]
-  TUNER_PAGE_B:      ["7B22", ""]
-  TUNER_PAGE_C:      ["7B23", ""]
-  TUNER_PAGE_D:      ["7B24", ""]
-  TUNER_PAGE_E:      ["7B25", ""]
+  TUNER_PRESET_UP:   "7B0C"
+  TUNER_PRESET_DOWN: "7B0D"
+  TUNER_PAGE_A:      "7B21"
+  TUNER_PAGE_B:      "7B22"
+  TUNER_PAGE_C:      "7B23"
+  TUNER_PAGE_D:      "7B24"
+  TUNER_PAGE_E:      "7B25"
+
+# ==========================================================
+# REPORT MAP - RESPONSE SUFFIXES
+# Maps 5-digit report suffix hex to friendly command names
+# (First digit of full payload identifies source: 0-4)
+# ==========================================================
+reports:
+  # --- FORMAT (Item 10) ---
+  FORMAT_ANALOG:        "1000"
+  FORMAT_PCM:           "1001"
+  FORMAT_DSD:           "1002"
+  FORMAT_DIGITAL:       "1003"
+  FORMAT_DOLBY_DIGITAL: "1004"
+  FORMAT_DTS:           "1005"
+  FORMAT_AAC:           "1006"
+  FORMAT_DTS_HD:        "1007"
+  FORMAT_DTS_HD_MSTR:   "1008"
+  FORMAT_DD_PLUS:       "1009"
+  FORMAT_TRUEHD:        "100A"
+  FORMAT_WMA:           "100B"
+  FORMAT_MP3:           "100C"
+  FORMAT_UNKNOWN:       "10FE"
+  FORMAT_NONE:          "10FF"
+
+  # --- SAMPLING (Item 11) ---
+  SAMPLING_ANALOG:   "1100"
+  SAMPLING_8KHZ:     "1101"
+  SAMPLING_11_025KHZ: "1102"
+  SAMPLING_12KHZ:    "1103"
+  SAMPLING_16KHZ:    "1104"
+  SAMPLING_22_05KHZ: "1105"
+  SAMPLING_24KHZ:    "1106"
+  SAMPLING_32KHZ:    "1107"
+  SAMPLING_44_1KHZ:  "1108"
+  SAMPLING_48KHZ:    "1109"
+  SAMPLING_64KHZ:    "110A"
+  SAMPLING_88_2KHZ:  "110B"
+  SAMPLING_96KHZ:    "110C"
+  SAMPLING_128KHZ:   "110D"
+  SAMPLING_176_4KHZ: "110E"
+  SAMPLING_192KHZ:   "110F"
+  SAMPLING_2_8MHZ_DSD: "1110"
+  SAMPLING_UNKNOWN:  "11FE"
+  SAMPLING_NONE:     "11FF"
+
+  # --- CHANNEL FRONT/REAR (Item 12) ---
+  CHANNEL_1_1:       "1200"
+  CHANNEL_1_0:       "1201"
+  CHANNEL_2_0:       "1202"
+  CHANNEL_3_0:       "1203"
+  CHANNEL_2_1:       "1204"
+  CHANNEL_3_1:       "1205"
+  CHANNEL_2_2:       "1206"
+  CHANNEL_3_2:       "1207"
+  CHANNEL_2_3:       "1208"
+  CHANNEL_3_3:       "1209"
+  CHANNEL_2_4:       "120A"
+  CHANNEL_3_4:       "120B"
+  CHANNEL_MLT:       "120C"
+  CHANNEL_UNKNOWN:   "120F"
+
+  # --- CHANNEL LFE (Item 13) ---
+  CHANNEL_LFE_0_1:   "1300"
+  CHANNEL_LFE_0_2:   "1301"
+  CHANNEL_LFE_NONE:  "13FF"
+
+  # --- BIT RATE (Item 14) ---
+  BITRATE_32KBPS:    "1400"
+  BITRATE_40KBPS:    "1401"
+  BITRATE_48KBPS:    "1402"
+  BITRATE_56KBPS:    "1403"
+  BITRATE_64KBPS:    "1404"
+  BITRATE_72KBPS:    "1405"
+  BITRATE_80KBPS:    "1406"
+  BITRATE_96KBPS:    "1407"
+  BITRATE_112KBPS:   "1408"
+  BITRATE_128KBPS:   "1409"
+  BITRATE_144KBPS:   "140A"
+  BITRATE_160KBPS:   "140B"
+  BITRATE_192KBPS:   "140C"
+  BITRATE_224KBPS:   "140D"
+  BITRATE_256KBPS:   "140E"
+  BITRATE_288KBPS:   "140F"
+  BITRATE_320KBPS:   "1410"
+  BITRATE_384KBPS:   "1411"
+  BITRATE_448KBPS:   "1412"
+  BITRATE_512KBPS:   "1413"
+  BITRATE_576KBPS:   "1414"
+  BITRATE_640KBPS:   "1415"
+  BITRATE_768KBPS:   "1416"
+  BITRATE_960KBPS:   "1417"
+  BITRATE_1024KBPS:  "1418"
+  BITRATE_1152KBPS:  "1419"
+  BITRATE_1280KBPS:  "141A"
+  BITRATE_1344KBPS:  "141B"
+  BITRATE_1408KBPS:  "141C"
+  BITRATE_1411_2KBPS: "141D"
+  BITRATE_1472KBPS:  "141E"
+  BITRATE_1536KBPS:  "141F"
+  BITRATE_1920KBPS:  "1420"
+  BITRATE_2048KBPS:  "1421"
+  BITRATE_3072KBPS:  "1422"
+  BITRATE_3840KBPS:  "1423"
+  BITRATE_OPEN:      "1424"
+  BITRATE_VARIABLE:  "1425"
+  BITRATE_LOSSLESS:  "1426"
+  BITRATE_UNKNOWN:   "14FF"
+
+  # --- DIALOG (Item 15) ---
+  DIALOG_MINUS_31DB: "1500"
+  DIALOG_MINUS_30DB: "1501"
+  DIALOG_MINUS_1DB:  "151E"
+  DIALOG_PLUS_0DB:   "151F"
+  DIALOG_UNKNOWN:    "15FF"
+
+  # --- FLAG (Item 16) ---
+  FLAG_DD_KARAOKE:   "1600"
+  FLAG_DD_6_1:       "1601"
+  FLAG_DTS_ES_MATRIX: "1602"
+  FLAG_DTS_ES_DISCRETE: "1603"
+  FLAG_DTS_96HZ_24BIT: "1604"
+  FLAG_PRE_EMPHASIS: "1605"
+  FLAG_DPL_ENCODED:  "1606"
+  FLAG_DONT_CARE:    "1607"
+
+  # --- INPUT (Item 21) ---
+  INPUT_PHONO:       "2100"
+  INPUT_CD:          "2101"
+  INPUT_TUNER:       "2102"
+  INPUT_CD_R:        "2103"
+  INPUT_MD_TAPE:     "2104"
+  INPUT_DVD:         "2105"
+  INPUT_DTV_CBL:     "2106"
+  INPUT_CBL_SAT:     "2107"
+  INPUT_SAT:         "2108"
+  INPUT_VCR:         "2109"
+  INPUT_DVR:         "210A"
+  INPUT_VCR_DVR:     "210B"
+  INPUT_V_AUX_DOCK:  "210C"
+  INPUT_NET_USB:     "210D"
+  INPUT_XM:          "210E"
+  INPUT_BD_HD_DVD:   "210F"
+  INPUT_MULTI_CH:    "2110"
+
+  # --- PROGRAM (Item 28) ---
+  PROGRAM_MUNICH:    "2800"
+  PROGRAM_HALL_B:    "2801"
+  PROGRAM_HALL_C:    "2802"
+  PROGRAM_HALL_D:    "2804"
+  PROGRAM_VIENNA:    "2805"
+  PROGRAM_LIVE_CONCERT: "2806"
+  PROGRAM_HALL_AMSTERDAM: "2807"
+  PROGRAM_TOKYO:     "2808"
+  PROGRAM_FREIBURG:  "2809"
+  PROGRAM_ROYAUMONT: "280A"
+  PROGRAM_CHAMBER:   "280B"
+  PROGRAM_VILLAGE_GATE: "280C"
+  PROGRAM_VILLAGE_VANGUARD: "280D"
+  PROGRAM_BOTTOM_LINE: "280E"
+  PROGRAM_CELLAR_CLUB: "280F"
+  PROGRAM_ROXY_THEATER: "2810"
+  PROGRAM_WAREHOUSE_LOFT: "2811"
+  PROGRAM_ARENA:     "2812"
+  PROGRAM_DISCO:     "2814"
+  PROGRAM_PARTY:     "2815"
+  PROGRAM_GAME:      "2816"
+  PROGRAM_7CH_STEREO: "2817"
+  PROGRAM_MUSIC_VIDEO: "2818"
+  PROGRAM_DJ:        "2819"
+  PROGRAM_RECITAL_OPERA: "281C"
+  PROGRAM_ACTION_GAME: "281E"
+  PROGRAM_ROLEPLAYING_GAME: "281F"
+  PROGRAM_PAVILION:  "281D"
+  PROGRAM_MONO_MOVIE: "2820"
+  PROGRAM_SPORTS:    "2821"
+  PROGRAM_SPECTACLE: "2824"
+  PROGRAM_SCI_FI:    "2825"
+  PROGRAM_ADVENTURE: "2828"
+  PROGRAM_DRAMA:     "2829"
+  PROGRAM_SURROUND_DECODE: "282C"
+  PROGRAM_STANDARD:  "282D"
+  PROGRAM_PLii_MOVIE: "2830"
+  PROGRAM_PLii_MUSIC: "2831"
+  PROGRAM_NEO6_MOVIE: "2832"
+  PROGRAM_NEO6_MUSIC: "2833"
+  PROGRAM_2CH_STEREO: "2834"
+  PROGRAM_STEREO_2CH_DIRECT: "2835"
+  PROGRAM_THX_CINEMA: "2836"
+  PROGRAM_THX_MUSIC: "2837"
+  PROGRAM_THX_GAME:  "2838"
+  PROGRAM_ENHANCER_2CH_LOW: "2840"
+  PROGRAM_ENHANCER_2CH_HIGH: "2841"
+  PROGRAM_ENHANCER_7CH_LOW: "2842"
+  PROGRAM_ENHANCER_7CH_HIGH: "2843"
+  PROGRAM_STRAIGHT:  "2880"
+
+  # --- AUDIO SELECT & DECODER MODE (Item 22) ---
+  # Format: Decoder Mode (0=AUTO, 1=DTS, 2=AAC) + Audio Select (0=AUTO, 3=COAX/OPT, 4=ANALOG, 8=HDMI)
+  AS_DM_AUTO_AUTO:      "2200"
+  AS_DM_AUTO_COAX_OPT:  "2203"
+  AS_DM_AUTO_ANALOG:    "2204"
+  AS_DM_AUTO_HDMI:      "2208"
+  AS_DM_DTS_AUTO:       "2210"
+  AS_DM_DTS_COAX_OPT:   "2213"
+  AS_DM_DTS_ANALOG:     "2214"
+  AS_DM_DTS_HDMI:       "2218"
+  AS_DM_AAC_AUTO:       "2220"
+  AS_DM_AAC_COAX_OPT:   "2223"
+  AS_DM_AAC_ANALOG:     "2224"
+  AS_DM_AAC_HDMI:       "2228"
+
+  # --- AUDIO SELECT (Item 1) ---
+  # TODO: We need a logic to here
+  AUDIO_SELECT:      "2200"
+
+ # --- POWER ---
+  POWER_ON:          "2002"
+  POWER_OFF:         "2000"
+  ZONE2_POWER_ON:    "2021"
+  ZONE2_POWER_OFF:   "2020"
+  MUTE_ON:           "2301"
+  MUTE_OFF:          "2300"
+  ZONE2_MUTE:        "2321"
+
+
+system:
+  SET_REPORT:       "0000"
+  SET_REPORT_TIME:  "0100"
+
+  

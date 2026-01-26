@@ -8,6 +8,28 @@ import yaml
 import os
 import re
 
+# ANSI Color Codes (256-color support)
+class Colors:
+    RESET = '\033[0m'
+    BOLD = '\033[1m'
+    
+    # 256-color codes (foreground)
+    # Tags
+    REMOTE_TAG = '\033[38;5;30m'      # Dark Teal
+    FRONT_PANEL_TAG = '\033[38;5;226m'  # Bright Yellow
+    VOLUME_KNOB_TAG = '\033[38;5;200m'  # Hot Magenta
+    SERIAL_TAG = '\033[38;5;46m'      # Bright Green
+    SYSTEM_TAG = '\033[38;5;39m'      # Bright Blue
+    TCP_TAG = '\033[38;5;208m'        # Orange
+    TX_TAG = '\033[38;5;87m'          # Light Cyan
+    ERROR_TAG = '\033[38;5;196m'      # Bright Red
+    
+    # Message content colors
+    SUCCESS = '\033[38;5;82m'         # Bright Green
+    WARNING = '\033[38;5;178m'        # Orange-Yellow
+    HEX_DATA = '\033[1;38;5;231m'     # Bold White
+    INFO = '\033[38;5;117m'           # Light Blue
+
 class YamahaAVRDaemon:
     def __init__(self, config_file='config.yaml'):
         # 1. Load Config and Build Unified Tables
@@ -44,13 +66,79 @@ class YamahaAVRDaemon:
 
     def broadcast(self, msg):
         """Sends updates to TCP clients. Heartbeats are hidden from local console."""
-        if not "Heartbeat" in msg: print(msg)
+        # Print colorized message to console only
+        if not "Heartbeat" in msg:
+            colored_msg = self._colorize_message(msg)
+            print(colored_msg)
+        
+        # Send plain message (no color codes) to TCP clients
         with self.clients_lock:
             for c in self.clients[:]:
                 try:
                     c.sendall((msg + "\n").encode('utf-8'))
                 except:
                     self.clients.remove(c)
+
+    def _print_colored(self, msg):
+        """Print colorized message to console directly (not broadcast)."""
+        colored_msg = self._colorize_message(msg)
+        print(colored_msg)
+
+    def _colorize_message(self, msg):
+        """Add ANSI color codes to message for console output with advanced 256-color support."""
+        # Extract tag and content
+        import re
+        tag_match = re.match(r'^(\[.*?\])\s(.*)$', msg)
+        
+        if tag_match:
+            tag = tag_match.group(1)
+            content = tag_match.group(2)
+            
+            # Determine colors based on tag
+            if "[REMOTE" in tag:
+                tag_color = Colors.REMOTE_TAG
+                content_color = '\033[38;5;123m'  # Light Teal for REMOTE content
+            elif "[FRONT PANEL" in tag:
+                tag_color = Colors.FRONT_PANEL_TAG
+                content_color = '\033[38;5;229m'  # Light Yellow for FRONT PANEL content
+            elif "[VOLUME KNOB" in tag:
+                tag_color = Colors.VOLUME_KNOB_TAG
+                content_color = '\033[38;5;213m'  # Light Magenta for VOLUME KNOB content
+            elif "[SERIAL" in tag:
+                tag_color = Colors.SERIAL_TAG
+                content_color = '\033[38;5;120m'  # Light Green for SERIAL content
+            elif "[SYSTEM" in tag:
+                tag_color = Colors.SYSTEM_TAG
+                content_color = '\033[38;5;117m'  # Light Blue for SYSTEM content
+            elif "[TCP]" in tag:
+                tag_color = Colors.TCP_TAG
+                content_color = '\033[38;5;215m'  # Light Orange for TCP content
+            elif "[TX]" in tag:
+                tag_color = Colors.TX_TAG
+                content_color = '\033[38;5;188m'  # Light Cyan-White for TX content
+            elif "[ERROR]" in tag:
+                tag_color = Colors.ERROR_TAG
+                content_color = '\033[38;5;210m'  # Light Red for ERROR content
+            else:
+                tag_color = Colors.RESET
+                content_color = Colors.SUCCESS
+            
+            # Colorize tag
+            colored_tag = f"{tag_color}{Colors.BOLD}{tag}{Colors.RESET}"
+            
+            # Colorize content and hex data
+            # Find hex code patterns like (Hex: ...) at the end
+            hex_match = re.search(r'\s\(Hex:\s([^)]+)\)$', content)
+            if hex_match:
+                hex_code = hex_match.group(1)
+                content_part = content[:hex_match.start()]
+                colored_content = f"{content_color}{content_part}{Colors.RESET} {content_color}(Hex: {Colors.HEX_DATA}{hex_code}{content_color}){Colors.RESET}"
+            else:
+                colored_content = f"{content_color}{content}{Colors.RESET}"
+            
+            return f"{colored_tag} {colored_content}"
+        else:
+            return msg
 
     def open_serial(self):
         try:
@@ -77,7 +165,7 @@ class YamahaAVRDaemon:
         # Packet Assembly: STX + Switch + Data + ETX
         packet = self.STX + sw_byte + data_str.encode('ascii') + self.ETX
         self.ser.write(packet)
-        print(f"[TX] Sent: {packet}")
+        self._print_colored(f"[TX] Sent: {packet}")
 
     def run_serial_worker(self):
         last_heartbeat = time.time()
@@ -126,7 +214,7 @@ class YamahaAVRDaemon:
                                     "1": "[REMOTE]",
                                     "2": "[FRONT PANEL]",
                                     "3": "[SYSTEM]",
-                                    "4": "[VOLUME KNOB]"
+                                    "4": "[FRONT KNOB]"
                                     
                                 }
                                 tag = tag_map.get(src, f"[{src}]")
@@ -139,7 +227,7 @@ class YamahaAVRDaemon:
                                 elif payload[1:4] == "026": # Volume Report ID
                                     try:
                                         db = (int(payload[4:], 16) * 0.5) - 99.5
-                                        self.broadcast(f"{tag} VOLUME: {db:.1f} dB (Hex: {payload})")
+                                        self.broadcast(f"{tag} VOLUME {db:.1f} dB (Hex: {payload})")
                                     except: pass
                                 else:
                                     self.broadcast(f"{tag} RAW: {payload}")
@@ -156,9 +244,9 @@ class YamahaAVRDaemon:
                     time.sleep(0.2)
                     self.send_raw_packet(b'0', self.commands['POWER_ON'])
 
-                elif line.startswith("SET_VOL_"):
+                elif line.startswith("MAIN_VOL_SET_"):
                     try:
-                        target_db = float(line.replace("SET_VOL_", ""))
+                        target_db = float(line.replace("MAIN_VOL_SET_", ""))
 
                         # 1. Calculate Hex: (dB + 99.5) * 2
                         # 2. Format as 2-digit Hex (e.g., 77)
@@ -188,7 +276,7 @@ class YamahaAVRDaemon:
             except queue.Empty: pass
 
     def handle_client(self, client, addr):
-        print(f"[TCP] New connection from {addr}")
+        self._print_colored(f"[TCP] New connection from {addr}")
         with self.clients_lock: self.clients.append(client)
         try:
             client.settimeout(1.0)
@@ -217,7 +305,7 @@ class YamahaAVRDaemon:
         self.server_socket.bind((self.tcp_host, self.tcp_port))
         self.server_socket.listen(5)
         self.server_socket.settimeout(1.0)
-        print(f"[TCP] Listening on {self.tcp_port} (Heartbeat Every 60s)...")
+        self._print_colored(f"[TCP] Listening on {self.tcp_port} (Heartbeat Every 60s)...")
         while self.running:
             try:
                 client, addr = self.server_socket.accept()
